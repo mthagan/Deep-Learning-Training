@@ -1,4 +1,4 @@
-# Solving Question 3 from Lab1 1 with Python
+# Solving Question 2 from Lab1 1 with Python
 import matplotlib.pyplot as plt
 
 import lab1module
