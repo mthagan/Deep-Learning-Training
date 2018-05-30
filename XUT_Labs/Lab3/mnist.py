@@ -6,6 +6,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.transforms as transforms
+import numpy as np
+import matplotlib.pyplot as plt
+
+#----------------------------------------------------------------------------
+S1 = 20               # Number of neurons in the hidden layer
+S2 = 10               # Number of outputs
+num_epochs = 1       # Number of epochs
+learning_rate = 0.1   # Learning rate
+#----------------------------------------------------------------------------
+
 # --------------------------------------------------------------------------------------------
 # download data from MNIST and create mini-batch data loader
 torch.manual_seed(1122)
@@ -23,10 +33,10 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=250, shuffle=True)
 class MLP(nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
-        self.l1 = nn.Linear(1 * 28 * 28, 20)
+        self.l1 = nn.Linear(1 * 28 * 28, S1)
         self.t1 = nn.Tanh()
-        self.l2 = nn.Linear(20, 10)
-        self.t2 = nn.LogSoftmax()
+        self.l2 = nn.Linear(S1, S2)
+        self.t2 = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         x = x.view(-1, 1 * 28 * 28)
@@ -36,7 +46,7 @@ class MLP(nn.Module):
 # --------------------------------------------------------------------------------------------
 mlp = MLP()
 criterion = nn.NLLLoss()
-optimizer = optim.SGD(mlp.parameters(), lr=0.1, momentum=0.9)
+optimizer = optim.SGD(mlp.parameters(), lr=learning_rate, momentum=0.9)
 # --------------------------------------------------------------------------------------------
 
 # define a training epoch function
@@ -52,7 +62,7 @@ def trainEpoch(dataloader, epoch):
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        running_loss += loss.data[0]
+        running_loss += loss.data
         if (i + 1) % 50 == 0:
             print('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 50))
@@ -75,9 +85,39 @@ def testModel(dataloader):
           test_loss, correct, len(testloader.dataset),
           100. * correct / len(testloader.dataset)))
 
+#--------------------------------------------------------------------------------------------
+
+# Show results for one test image
+
+def showOneTestResult(dataloader, b_number, testnumber):
+    for i_batch, sample_batched in enumerate(dataloader):
+        if i_batch == b_number:
+            image1 = sample_batched[0]
+            image1 = image1[testnumber,:,:,:]
+            tar = sample_batched[1]
+            tar = tar[testnumber]
+            output = mlp(image1)
+            image1 = image1.data.numpy()
+            image1 = image1.squeeze()
+            plt.imshow(image1)
+            plt.show()
+            output = output.data.numpy()
+            output = np.exp(output)  # convert from logsoftmax to softmax
+            print('The network output for item ' + np.str(testnumber) + ' in batch ' + np.str(i_batch) + ' is:')
+            print(output)
+            print('The target is')
+            print(tar)
+
+
+
 # --------------------------------------------------------------------------------------------
 # run the training epoch 30 times and test the result
-for epoch in range(30):
+for epoch in range(num_epochs):
     trainEpoch(trainloader, epoch)
 
 testModel(testloader)
+
+# Show one example image, network output and target value
+batch_view = 0  # Which batch to take the example
+number_view = 0 # Which number of the batch to take the example
+showOneTestResult(trainloader, batch_view, number_view)
